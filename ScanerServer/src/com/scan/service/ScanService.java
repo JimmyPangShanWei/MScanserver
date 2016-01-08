@@ -139,6 +139,7 @@ public class ScanService extends Service {
 			} catch (RemoteException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+				LogUtil.SaveException("KillReceiver()", e.toString()) ;
 			}
 			
 		}
@@ -176,6 +177,7 @@ public class ScanService extends Service {
 						} catch (Exception e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
+							LogUtil.SaveException("scan()", e.toString()) ;
 						}
 						
 						
@@ -183,7 +185,7 @@ public class ScanService extends Service {
 				}).start();
 
 			} catch (DecoderException e) {
-				
+				LogUtil.SaveException("init()", e.toString()) ;
 				e.printStackTrace();
 				return INIT_FAIL;
 			}
@@ -199,6 +201,7 @@ public class ScanService extends Service {
 				} catch (DecoderException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+					LogUtil.SaveException("close()", e.toString()) ;
 				}
 			}
 			
@@ -230,10 +233,12 @@ public class ScanService extends Service {
 								swM.retoreMethod();
 								scanning = false ;
 								e.printStackTrace();
+								LogUtil.SaveException("scan()", e.toString()) ;
 							} catch (RemoteException e) {
 								swM.retoreMethod();
 								scanning = false ;
 								e.printStackTrace();
+								LogUtil.SaveException("scan()", e.toString()) ;
 							}
 						}
 						
@@ -269,6 +274,8 @@ public class ScanService extends Service {
 				data = new String(barcodeBytes, 0, barcodeBytes.length, "UTF-8");
 			}
 		}catch(Exception e){
+			
+			LogUtil.SaveException("chineseHolder", e.toString()) ;
 			
 		}
 		

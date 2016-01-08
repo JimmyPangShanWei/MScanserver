@@ -20,7 +20,7 @@ public class Config {
 	 */
 	public boolean isOpenBackMode(){
 		boolean isOpen = shared.getBoolean("scan_apply_input_back", true);
-		Log.e("isOpen", "isOpen----" + isOpen);
+//		Log.e("isOpen", "isOpen----" + isOpen);
 		return isOpen;
 	}
 	

@@ -53,7 +53,7 @@ public class Mservice extends InputMethodService {
 					barcode += "\n";
 				}
 				boolean flag = getCurrentInputConnection().commitText(barcode, 1);
-				Log.e("flag", " flag = " + flag);
+//				Log.e("flag", " flag = " + flag);
 			}
 			if(timer != null){
 				timer.cancel();
@@ -63,7 +63,7 @@ public class Mservice extends InputMethodService {
 				
 				@Override
 				public void run() {
-					Log.e("Timer", " Timer");
+//					Log.e("Timer", " Timer");
 				swM.retoreMethod();
 					
 				}
