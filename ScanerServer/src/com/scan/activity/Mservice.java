@@ -50,7 +50,7 @@ public class Mservice extends InputMethodService {
 			if(mConnection != null && barcode != null){
 				//是否添加回车换行
 				if(addEnter){
-					barcode += "\n";
+					barcode += "\r\n";
 				}
 				boolean flag = getCurrentInputConnection().commitText(barcode, 1);
 //				Log.e("flag", " flag = " + flag);

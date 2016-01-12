@@ -79,6 +79,8 @@ public class ScanService extends Service {
 		super.onDestroy();
 	}
 	
+	private long startTime = 0L;
+	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		synchronized (aidlScan) {
@@ -98,15 +100,22 @@ public class ScanService extends Service {
 						@Override
 						public void onListener(String barcode, byte[] bar) throws RemoteException {
 //							Log.e("bar-------", barcode);
+							scanning = false ;
+							
 							Intent mIntent = new Intent(ScanService.this, Mservice.class);
 							mIntent.putExtra("barcode", barcode);
 							startService(mIntent);
-							
 						}
 					});
 				}else{
-					swM.switchMethod() ;
-					aidlScan.scan();
+					//200ms内的操作不做处理
+					if(System.currentTimeMillis() - startTime < 200){
+						startTime = System.currentTimeMillis();
+					}else{
+						swM.switchMethod() ;
+						aidlScan.scan();	
+					}
+
 				}
 				}catch(Exception e){
 					
@@ -150,10 +159,65 @@ public class ScanService extends Service {
 	
 	private  AidlIscan aidlScan = new AidlIscan();
 	
+	private boolean scanning = false ;
 	//远程调用接口
 	class AidlIscan extends IScan.Stub{
 		private IScanResult iResultLister ;
-		private boolean scanning = false ;
+		
+		private Thread scanThread = null ;//扫描线程
+		
+		private Runnable scanRun = new Runnable() {
+			
+			@Override
+			public synchronized void run() {
+				if(mDecoder != null){
+					scanning = true ;
+					try {//ɨ��
+						//扫描，超时为5秒
+						mDecoder.waitForDecodeTwo(5000, mDecodeResult);
+						if(mDecodeResult.length > 0){
+							//�ص�
+							if(iResultLister != null){
+//								Log.e("barcode", "listner");
+								iResultLister.onListener(chineseHolder(mDecoder.getBarcodeByteData(), charSetName), mDecoder.getBarcodeByteData());
+								
+//								scanThread = null;
+							}
+//							scanning = false ;
+						}
+						
+					} catch (DecoderException e) {
+						swM.retoreMethod();
+						//出现异常停止扫描
+						try {
+							Thread.sleep(100) ;
+						} catch (InterruptedException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						e.printStackTrace();
+						
+						LogUtil.SaveException("scan()","***errorCode==" + e.getErrorCode() + "****"+e.toString()) ;
+						//errcode = 6  No image available
+						if(e.getErrorCode() == 6){
+							try {
+								close() ;//
+								Thread.sleep(1000) ;
+							} catch (Exception e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}//关闭
+						}
+						scanning = false ;
+					} catch (RemoteException e) {
+						swM.retoreMethod();
+						scanning = false ;
+						LogUtil.SaveException("scan()", e.toString()) ;
+					}
+				}
+				
+			}
+		};
 		@Override
 		public int init() throws RemoteException {
 			mDecoder = new Decoder();
@@ -198,6 +262,7 @@ public class ScanService extends Service {
 			if(mDecoder != null){
 				try {
 					mDecoder.disconnectDecoderLibrary();
+					mDecoder = null ;
 				} catch (DecoderException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -209,41 +274,20 @@ public class ScanService extends Service {
 
 		@Override
 		public void scan() throws RemoteException {
+			boolean isgoing = mDecoder.callbackKeepGoing();
+//			mDecoder.
+			LogUtil.LogE("isgoing----->", "" + isgoing);
 			if(!scanning){
-				new Thread(new Runnable() {
-					
-					@Override
-					public void run() {
-						scanning = true ;
-						if(mDecoder != null){
-							try {//ɨ��
-								mDecoder.waitForDecodeTwo(5000, mDecodeResult);
-//								swM.retoreMethod();
-								
-								if(mDecodeResult.length > 0){
-									//�ص�
-									if(iResultLister != null){
-//										Log.e("barcode", "listner");
-										iResultLister.onListener(chineseHolder(mDecoder.getBarcodeByteData(), charSetName), mDecoder.getBarcodeByteData());
-									}
-									scanning = false ;
-								}
-								
-							} catch (DecoderException e) {
-								swM.retoreMethod();
-								scanning = false ;
-								e.printStackTrace();
-								LogUtil.SaveException("scan()", e.toString()) ;
-							} catch (RemoteException e) {
-								swM.retoreMethod();
-								scanning = false ;
-								e.printStackTrace();
-								LogUtil.SaveException("scan()", e.toString()) ;
-							}
-						}
-						
-					}
-				}).start();
+				if(scanThread != null ){
+					LogUtil.LogE("scanThread--alive--->", "" + scanThread.isAlive());
+					//线程不为null强制中断
+					scanThread.interrupt() ;
+					scanThread = null ;
+				}
+				//创建单线程
+				scanThread = new Thread(scanRun);
+				LogUtil.LogE("scanThread--alive--->", "" + scanThread.isAlive());
+				scanThread.start() ;
 			}
 			
 		}
