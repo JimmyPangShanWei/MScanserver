@@ -88,6 +88,7 @@ public class ScanService extends Service {
 				if(!running){
 					swM.getDefualtInputM() ;//获取默认输入法
 					running = true ;
+					scanning = false ;
 					aidlScan.init();
 					aidlScan.setOnResultListener(new IScanResult() {
 						
@@ -100,7 +101,6 @@ public class ScanService extends Service {
 						@Override
 						public void onListener(String barcode, byte[] bar) throws RemoteException {
 //							Log.e("bar-------", barcode);
-							scanning = false ;
 							
 							Intent mIntent = new Intent(ScanService.this, Mservice.class);
 							mIntent.putExtra("barcode", barcode);
@@ -173,6 +173,8 @@ public class ScanService extends Service {
 				if(mDecoder != null){
 					scanning = true ;
 					try {//ɨ��
+						boolean is = mDecoder.callbackKeepGoing();
+						LogUtil.LogE("callbackKeepGoing", "" + is);
 						//扫描，超时为5秒
 						mDecoder.waitForDecodeTwo(5000, mDecodeResult);
 						if(mDecodeResult.length > 0){
@@ -181,11 +183,11 @@ public class ScanService extends Service {
 //								Log.e("barcode", "listner");
 								iResultLister.onListener(chineseHolder(mDecoder.getBarcodeByteData(), charSetName), mDecoder.getBarcodeByteData());
 								
-//								scanThread = null;
 							}
 //							scanning = false ;
 						}
 						
+						scanning = false ;
 					} catch (DecoderException e) {
 						swM.retoreMethod();
 						//出现异常停止扫描
@@ -198,15 +200,21 @@ public class ScanService extends Service {
 						e.printStackTrace();
 						
 						LogUtil.SaveException("scan()","***errorCode==" + e.getErrorCode() + "****"+e.toString()) ;
-						//errcode = 6  No image available
-						if(e.getErrorCode() == 6){
+						/*
+						 * errcode = 6  No image available  出现异常
+						 * errcode = 5  No decoded message available
+						 */
+						if(e.getErrorCode() == 6 || e.getErrorCode() == 5){
 							try {
-								close() ;//
-								Thread.sleep(1000) ;
+//								close() ;//
+//								Thread.sleep(1000) ;
+								//重新打开
+//								init() ;
 							} catch (Exception e1) {
 								// TODO Auto-generated catch block
 								e1.printStackTrace();
 							}//关闭
+							
 						}
 						scanning = false ;
 					} catch (RemoteException e) {
@@ -274,12 +282,17 @@ public class ScanService extends Service {
 
 		@Override
 		public void scan() throws RemoteException {
-			boolean isgoing = mDecoder.callbackKeepGoing();
 //			mDecoder.
-			LogUtil.LogE("isgoing----->", "" + isgoing);
 			if(!scanning){
 				if(scanThread != null ){
 					LogUtil.LogE("scanThread--alive--->", "" + scanThread.isAlive());
+					try {
+						mDecoder.stopScanning();
+						Thread.sleep(10) ;
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					//线程不为null强制中断
 					scanThread.interrupt() ;
 					scanThread = null ;

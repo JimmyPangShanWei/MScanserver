@@ -54,12 +54,17 @@
             </intent-filter>
             <meta-data android:name="android.view.im" android:resource="@xml/method"/>
         </service>
-        <!-- 功能键监听 -->
-        <receiver android:name="com.scan.service.KeyListener">
+        <!-- 功能键监听 ,设置最高优先级-->
+        <receiver android:name="com.scan.service.KeyListener"
+            android:priority="1000">
             <intent-filter >
                 <action android:name="android.intent.action.FUN_KEY"/>
             </intent-filter>
         </receiver>
+        <!-- 扫描服务 -->
+        <service android:name="com.scan.service.MScanService">
+        </service>        
+        
     </application>
 
 </manifest>

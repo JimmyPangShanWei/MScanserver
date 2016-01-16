@@ -6,6 +6,7 @@ import com.hsm.barcode.DecoderException;
 import com.hsm.barcode.SymbologyConfig;
 import com.hsm.barcode.DecoderConfigValues.SymbologyID;
 import com.scan.service.LogUtil;
+import com.scan.service.Util;
 
 /**
  * 扫描
@@ -13,12 +14,21 @@ import com.scan.service.LogUtil;
  *
  */
 public class Scanner implements IScaner{
-
-	private Decoder mDecoder;  //设备
-	private DecodeResult mDecodeResult;//扫描结果
 	
+	/**扫描引擎****/
+	private Decoder mDecoder;  //设备
+	/**扫描解码结果****/
+	private DecodeResult mDecodeResult;//扫描结果
+	/**debug****/
 	private String TAG = "class Scanner" ;
+	/**扫描扫描状态****/
+	private boolean isScanning = false ;//默认
+	/**扫描结果回调接口****/
+	private IScanResult result ;//
+	/**默认解码字符集****/
+	private String charSet = "UTF-8" ;
 
+	public boolean isInit = false ;
 	/**
 	 * 初始化设备
 	 * @return
@@ -54,6 +64,7 @@ public class Scanner implements IScaner{
 					
 				}
 			}).start();
+			isInit = true ;
 		} catch (DecoderException e) {
 			
 			e.printStackTrace();
@@ -85,7 +96,24 @@ public class Scanner implements IScaner{
 	 */
 	@Override
 	public void scan() {
-		// TODO Auto-generated method stub
+		//启动扫描时，判断是否正在调用
+		if(!isScanning){
+			//创建新的线程用于调用扫描
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						//扫描5秒的延时
+						mDecoder.waitForDecodeTwo(5000, mDecodeResult);
+					} catch (DecoderException e) {
+						LogUtil.SaveException(TAG, e.toString()) ;
+//						e.printStackTrace();
+						
+					}
+					
+				}
+			}).start();
+		}
 		
 	}
 
@@ -94,8 +122,8 @@ public class Scanner implements IScaner{
 	 */
 	@Override
 	public void setOnResultListener(IScanResult iLister) {
-		// TODO Auto-generated method stub
 		
+		this.result = iLister ;
 	}
 
 	/**
@@ -103,7 +131,7 @@ public class Scanner implements IScaner{
 	 */
 	@Override
 	public void setChar(String charSetName) {
-		// TODO Auto-generated method stub
+		
 		
 	}
 
