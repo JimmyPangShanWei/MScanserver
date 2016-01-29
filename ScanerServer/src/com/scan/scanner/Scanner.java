@@ -27,6 +27,8 @@ public class Scanner implements IScaner{
 	private IScanResult result ;//
 	/**默认解码字符集****/
 	private String charSet = "UTF-8" ;
+	
+	private boolean start = true ; 
 
 	public boolean isInit = false ;
 	/**
@@ -41,7 +43,7 @@ public class Scanner implements IScaner{
 			//连接设备  connect dev
 			mDecoder.connectDecoderLibrary();
 			//设置所有码制可用  set all symbology enable
-			mDecoder.enableSymbology(SymbologyID.SYM_ALL);
+			mDecoder.enableSymbology(SymbologyID.SYM_QR);
 			//设置EN13码
 			SymbologyConfig config = new SymbologyConfig(SymbologyID.SYM_EAN13);
 			config.Flags = 5 ;
@@ -65,6 +67,9 @@ public class Scanner implements IScaner{
 				}
 			}).start();
 			isInit = true ;
+			start = true ; 
+			//开启线程
+			new Thread(new ScanTask()).start() ;
 		} catch (DecoderException e) {
 			
 			e.printStackTrace();
@@ -77,6 +82,10 @@ public class Scanner implements IScaner{
 	 */
 	@Override
 	public void closeDev() {
+		start = false ;
+		scan = false ;
+		taskOK = false ;
+		isInit = false ;
 		LogUtil.LogE(TAG, "closeDev()") ;
 		if(mDecoder != null){
 			try {
@@ -90,30 +99,92 @@ public class Scanner implements IScaner{
 		}
 		
 	}
+	
+	private boolean scan = false ; 
+	private boolean taskOK = true ;
+	//扫描线程
+	class ScanTask implements Runnable{
+
+		@Override
+		public void run() {
+			
+			while(start){
+				try{
+					//是否触发扫描
+					if(scan){
+						
+						//加50ms的延时
+						Thread.sleep(50) ;
+						//线程是否被占用
+						if(taskOK){
+							taskOK = false ;
+							mDecoder.waitForDecodeTwo(6000, mDecodeResult);
+							//得到结果回调
+							if(mDecodeResult.barcodeData != null && mDecodeResult.barcodeData.length() > 0){
+								if(result != null){
+									result.onListne(mDecodeResult.barcodeData, mDecodeResult.byteBarcodeData) ;
+									scan = false ;
+								}
+							}
+						}
+					}
+//					if(scan){
+//						
+//					}
+				}catch(DecoderException e){
+					scan = false ;
+					//print exception
+					LogUtil.LogE("ScanTask", e.toString()) ;
+					LogUtil.SaveException("DecoderException", e.toString()) ;
+					if(e.getErrorCode() == 5)
+					closeDev() ;
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+//				scan = false ;
+				taskOK = true ;
+			}
+			
+		}
+		
+	}
 
 	/***
 	 * 调用扫描
 	 */
 	@Override
 	public void scan() {
-		//启动扫描时，判断是否正在调用
-		if(!isScanning){
-			//创建新的线程用于调用扫描
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						//扫描5秒的延时
-						mDecoder.waitForDecodeTwo(5000, mDecodeResult);
-					} catch (DecoderException e) {
-						LogUtil.SaveException(TAG, e.toString()) ;
-//						e.printStackTrace();
-						
-					}
-					
-				}
-			}).start();
+		if(!scan ){
+			scan = true ;
 		}
+		
+//		//启动扫描时，判断是否正在调用
+//		if(!isScanning){
+//			isScanning = true ;
+//			//创建新的线程用于调用扫描
+//			new Thread(new Runnable() {
+//				@Override
+//				public void run() {
+//					try {
+//						//扫描5秒的延时
+//						mDecoder.waitForDecodeTwo(2000, mDecodeResult);
+//						//得到结果回调
+//						if(mDecodeResult.barcodeData != null && mDecodeResult.barcodeData.length() > 0){
+//							if(result != null){
+//								result.onListne(mDecodeResult.barcodeData, mDecodeResult.byteBarcodeData) ;
+//							}
+//						}
+//					} catch (DecoderException e) {
+//						LogUtil.SaveException(TAG, e.toString()) ;
+////						e.printStackTrace();
+//						
+//					}
+//					isScanning = false ;
+//					
+//				}
+//			}).start();
+//		}
 		
 	}
 

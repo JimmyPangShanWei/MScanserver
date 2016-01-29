@@ -1,5 +1,6 @@
 package com.scan.service;
 
+import com.scan.scanner.IScanResult;
 import com.scan.scanner.Scanner;
 
 import android.app.Service;
@@ -27,6 +28,8 @@ public class MScanService extends Service {
 			scanner.closeDev(); 
 		}
 		scanner = new Scanner() ;
+		//初始化声音池
+		Util.initSoundPool(this);
 		super.onCreate();
 	}
 	
@@ -35,6 +38,16 @@ public class MScanService extends Service {
 		if(!scanner.isInit){
 			//初始化
 			scanner.initDev() ;
+			//回调扫描结果
+			scanner.setOnResultListener(new IScanResult() {
+				
+				@Override
+				public void onListne(String barcode, byte[] barcodeByte) {
+					//播放提示音
+					Util.play(1, 0) ;
+					
+				}
+			});
 		}else{
 			scanner.scan() ;
 		}

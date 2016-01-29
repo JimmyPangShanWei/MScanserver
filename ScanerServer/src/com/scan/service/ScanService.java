@@ -1,8 +1,13 @@
 package com.scan.service;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.UnsupportedEncodingException;
 
 import com.hsm.barcode.DecodeResult;
 import com.hsm.barcode.Decoder;
+import com.hsm.barcode.ImageAttributes;
+import com.hsm.barcode.DecodeWindowing.DecodeWindowShowWindow;
+import com.hsm.barcode.DecoderConfigValues.LightsMode;
 import com.hsm.barcode.DecoderConfigValues.SymbologyID;
 import com.hsm.barcode.DecoderException;
 import com.hsm.barcode.SymbologyConfig;
@@ -15,6 +20,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -175,18 +181,24 @@ public class ScanService extends Service {
 					try {//ɨ��
 						boolean is = mDecoder.callbackKeepGoing();
 						LogUtil.LogE("callbackKeepGoing", "" + is);
+						Thread.sleep(50) ;
 						//扫描，超时为5秒
-						mDecoder.waitForDecodeTwo(5000, mDecodeResult);
-						if(mDecodeResult.length > 0){
+//						mDecoder.waitForDecodeTwo(5000, mDecodeResult);
+						mDecoder.waitForDecode(5000) ;
+						if(mDecoder.getBarcodeData() != null && mDecoder.getBarcodeLength() > 0){
+							//获取最后一张图片并保存
+//							getLastImg() ;
 							//�ص�
 							if(iResultLister != null){
 //								Log.e("barcode", "listner");
-								iResultLister.onListener(chineseHolder(mDecoder.getBarcodeByteData(), charSetName), mDecoder.getBarcodeByteData());
+								//将结果回调
+								iResultLister.onListener(mDecoder.getBarcodeData(), mDecoder.getBarcodeByteData());
 								
 							}
 //							scanning = false ;
 						}
-						
+						//减慢速度
+						Thread.sleep(50) ;
 						scanning = false ;
 					} catch (DecoderException e) {
 						swM.retoreMethod();
@@ -199,62 +211,73 @@ public class ScanService extends Service {
 						}
 						e.printStackTrace();
 						
-						LogUtil.SaveException("scan()","***errorCode==" + e.getErrorCode() + "****"+e.toString()) ;
-						/*
-						 * errcode = 6  No image available  出现异常
-						 * errcode = 5  No decoded message available
-						 */
-						if(e.getErrorCode() == 6 || e.getErrorCode() == 5){
-							try {
-//								close() ;//
-//								Thread.sleep(1000) ;
-								//重新打开
-//								init() ;
-							} catch (Exception e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}//关闭
-							
-						}
 						scanning = false ;
 					} catch (RemoteException e) {
+						//输入法恢复
 						swM.retoreMethod();
 						scanning = false ;
 						LogUtil.SaveException("scan()", e.toString()) ;
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
 				}
 				
 			}
 		};
-		@Override
+		@Override//初始化
 		public int init() throws RemoteException {
 			mDecoder = new Decoder();
 			mDecodeResult = new DecodeResult();
 			try {
 				mDecoder.connectDecoderLibrary();
-				mDecoder.enableSymbology(SymbologyID.SYM_ALL);
-				//����EAN13У��λ
+				//打开所有码制,(只打开QR码)
+//				mDecoder.enableSymbology(SymbologyID.SYM_ALL);
+				mDecoder.enableSymbology(SymbologyID.SYM_QR);
+//				mDecoder.enableSymbology(SymbologyID.SYM_PDF417);
+//				mDecoder.enableSymbology(SymbologyID.SYM_DATAMATRIX);
+//				mDecoder.enableSymbology(SymbologyID.SYM_UPCA);
+//				mDecoder.enableSymbology(SymbologyID.SYM_CHINAPOST);
+				mDecoder.enableSymbology(SymbologyID.SYM_EAN13);
+//				mDecoder.enableSymbology(SymbologyID.SYM_CODE39);
+//				mDecoder.enableSymbology(SymbologyID.SYM_CODE128);
+//				mDecoder.enableSymbology(SymbologyID.SYM_EAN8);
+//				mDecoder.enableSymbology(SymbologyID.SYM_CODE32);
+				//打开EAN13码校验
 				SymbologyConfig config = new SymbologyConfig(SymbologyID.SYM_EAN13);
 				config.Flags = 5 ;
 				config.Mask = 1 ;
 				mDecoder.setSymbologyConfig(config);
-				new Thread(new Runnable() {
-					
-					@Override
-					public void run() {
-						try {
-							mDecoder.startScanning();
-							Thread.sleep(50);
-							mDecoder.stopScanning();
-						} catch (Exception e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-							LogUtil.SaveException("scan()", e.toString()) ;
-						}
-						
-						
-					}
-				}).start();
+				//设置解码窗口模式
+				mDecoder.setDecodeWindowMode(DecodeWindowShowWindow.DECODE_WINDOW_SHOW_WINDOW_WHITE) ;
+				//设置灯光模式
+				mDecoder.setLightsMode(LightsMode.ILLUM_AIM_ON);
+				try {
+					mDecoder.startScanning();
+					Thread.sleep(50);
+					mDecoder.stopScanning();
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					LogUtil.SaveException("scan()", e.toString()) ;
+				}
+//				new Thread(new Runnable() {
+//					
+//					@Override
+//					public void run() {
+//						try {
+//							mDecoder.startScanning();
+//							Thread.sleep(50);
+//							mDecoder.stopScanning();
+//						} catch (Exception e) {
+//							// TODO Auto-generated catch block
+//							e.printStackTrace();
+//							LogUtil.SaveException("scan()", e.toString()) ;
+//						}
+//						
+//						
+//					}
+//				}).start();
 
 			} catch (DecoderException e) {
 				LogUtil.SaveException("init()", e.toString()) ;
@@ -264,6 +287,63 @@ public class ScanService extends Service {
 			return INIT_OK;
 		}
 
+		int m_img_height  ;
+		int m_img_width ;
+
+		private Bitmap bmp;
+		//获取最后一张图
+		private void getLastImg(){
+			try {
+				m_img_height = mDecoder.getImageHeight() ;
+				m_img_width = mDecoder.getImageWidth() ;
+				//图像参数
+				ImageAttributes attr = new ImageAttributes();
+				byte[] buffer = new byte[m_img_width * m_img_height]; // it 8-bit RAW
+				buffer = mDecoder.getLastImage(attr);
+				if(buffer != null){
+					// Convert from 8-bit RAW to 16-bit color
+					int width = m_img_width;
+					int height = m_img_height;
+					int[] array = new int[width*height*2]; // 2 bytes per pixel (RGB_565)
+					for(int h = 0; h < height; h++)
+					{
+						for(int w = 0; w < width; w++)
+						{
+							array[width*h + w] = buffer[width*h + w] * 0x00010101;		
+						}
+					}
+					bmp = Bitmap.createBitmap(m_img_width, m_img_height, Bitmap.Config.RGB_565);
+					// Set the pixels
+					bmp.setPixels(array, 0, width, 0, 0, width, height);
+					//save image
+					saveImg(bmp) ;
+				}
+				
+			} catch (DecoderException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+		
+		//保存图片
+		private void saveImg(Bitmap bp){
+			try{
+				File file = new File("/mnt/sdcard/Img.png") ;
+				if(file.exists()){
+					file.delete() ;
+				}
+				FileOutputStream fout = new FileOutputStream(file);
+				if(bp.compress(Bitmap.CompressFormat.PNG, 900, fout)){
+					fout.flush();
+					fout.close() ;
+				}
+				
+			}catch(Exception e){
+				
+			}
+		}
+		
 		@Override
 		public void close() throws RemoteException {
 			running = false ;
@@ -286,13 +366,13 @@ public class ScanService extends Service {
 			if(!scanning){
 				if(scanThread != null ){
 					LogUtil.LogE("scanThread--alive--->", "" + scanThread.isAlive());
-					try {
-						mDecoder.stopScanning();
-						Thread.sleep(10) ;
-					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+//					try {
+//						mDecoder.stopScanning();
+//						Thread.sleep(10) ;
+//					} catch (Exception e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
 					//线程不为null强制中断
 					scanThread.interrupt() ;
 					scanThread = null ;

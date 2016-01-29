@@ -14,6 +14,7 @@ import android.inputmethodservice.InputMethodService;
 import android.os.AsyncTask;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 
@@ -49,12 +50,21 @@ public class Mservice extends InputMethodService {
 			InputConnection mConnection  = getCurrentInputConnection();
 			if(mConnection != null && barcode != null){
 				//是否添加回车换行
-				if(addEnter){
-					barcode += "\r\n";
-				}
+				
+//					barcode += "\r\n";
+				
 				boolean flag = getCurrentInputConnection().commitText(barcode, 1);
+				if(addEnter){
+				//加入enter事件
+				KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER) ;
+				getCurrentInputConnection().sendKeyEvent(event);
+				
+				KeyEvent event1 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER) ;
+				getCurrentInputConnection().sendKeyEvent(event1);
+				}
 //				Log.e("flag", " flag = " + flag);
 			}
+//			KeyEvent event = new KeyEvent(action, code)
 			if(timer != null){
 				timer.cancel();
 			}

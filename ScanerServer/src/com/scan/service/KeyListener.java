@@ -21,6 +21,7 @@ public class KeyListener extends BroadcastReceiver {
 		boolean isKey = config.getFunKeyOpen(keycode);//是否设置了功能键扫描
 		if(keydown && openFlag && isKey){
 			Intent mIntent = new Intent(context, ScanService.class);
+//			Intent mIntent = new Intent(context, MScanService.class);
 			mIntent.putExtra("barcode", "adb");
 			context.startService(mIntent);
 		}

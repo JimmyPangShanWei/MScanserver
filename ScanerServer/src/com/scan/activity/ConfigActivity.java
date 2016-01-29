@@ -110,7 +110,7 @@ public class ConfigActivity extends PreferenceActivity implements OnPreferenceCh
 						protected void onPostExecute(Void result) {
 							switchBackMode.setEnabled(true);
 							switchBackMode.setSelectable(true);
-							switchBackMode.setSummary("打开");
+							switchBackMode.setSummary(ConfigActivity.this.getString(R.string.open));
 							checkVoice.setEnabled(true);
 							checkVoice.setSelectable(true);
 							checkF1.setEnabled(true);
@@ -129,7 +129,7 @@ public class ConfigActivity extends PreferenceActivity implements OnPreferenceCh
 						}
 					}.execute();
 				}else{
-					switchBackMode.setSummary("关闭");
+					switchBackMode.setSummary(ConfigActivity.this.getString(R.string.close));
 					checkVoice.setEnabled(false);
 					checkVoice.setSelectable(false);
 					checkF1.setEnabled(false);
